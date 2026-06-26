@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 _BAR_FMT = "{desc}: {n_fmt}/{total_fmt} | {elapsed} | {rate_fmt}"
 
-VLLM_BASE_URL = "http://localhost:8000/v1"
+VLLM_BASE_URL = "http://localhost:8030/v1"
 VLLM_API_KEY = "no-key-needed"
 STOP_STRINGS = ["<|im_end|>", "<|end_of_text|>"]
 
@@ -79,7 +79,7 @@ async def run_prompts(
     *,
     temperature: float = 0.7,
     top_p: float = 0.9,
-    max_tokens: int = 2048,
+    max_tokens: int = 32768,
     batch_size: int = 32,
     max_concurrent: int = 32,
     label: str = "",
@@ -101,7 +101,7 @@ async def run_conversations(
     *,
     temperature: float = 0.7,
     top_p: float = 0.9,
-    max_tokens: int = 2048,
+    max_tokens: int = 32768,
     batch_size: int = 32,
     max_concurrent: int = 32,
     label: str = "",
