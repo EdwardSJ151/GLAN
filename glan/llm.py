@@ -3,6 +3,9 @@ import asyncio
 from typing import Callable, List, Optional
 
 from openai import AsyncOpenAI
+from tqdm import tqdm
+
+_BAR_FMT = "{desc}: {n_fmt}/{total_fmt} | {elapsed} | {rate_fmt}"
 
 VLLM_BASE_URL = "http://localhost:8000/v1"
 VLLM_API_KEY = "no-key-needed"
@@ -52,17 +55,16 @@ async def _run_batched(
     label: str,
 ) -> List[Optional[str]]:
     results: List[Optional[str]] = []
-    for start in range(0, len(items), batch_size):
-        batch = items[start : start + batch_size]
-        results.extend(
-            await asyncio.gather(*[
+    with tqdm(total=len(items), desc=label, bar_format=_BAR_FMT, unit=" req") as pbar:
+        for start in range(0, len(items), batch_size):
+            batch = items[start : start + batch_size]
+            batch_results = await asyncio.gather(*[
                 _call(client, model_id, make_messages(item), sem,
                       temperature=temperature, top_p=top_p, max_tokens=max_tokens)
                 for item in batch
             ])
-        )
-        done = min(start + batch_size, len(items))
-        print(f"  [{label}] {done}/{len(items)} concluídos")
+            results.extend(batch_results)
+            pbar.update(len(batch))
     return results
 
 
@@ -85,7 +87,7 @@ async def run_prompts(
     """Run single-turn prompts concurrently in batches."""
     client, model_id = await _make_client()
     sem = asyncio.Semaphore(max_concurrent)
-    print(f"  [{label}] modelo={model_id} | {len(prompts)} prompts | lote={batch_size} | conc={max_concurrent}")
+    tqdm.write(f"  [{label}] modelo={model_id} | {len(prompts)} prompts | lote={batch_size} | conc={max_concurrent}")
     return await _run_batched(
         client, model_id, sem, prompts,
         lambda p: [{"role": "user", "content": p}],
@@ -107,7 +109,7 @@ async def run_conversations(
     """Run multi-turn conversations concurrently in batches."""
     client, model_id = await _make_client()
     sem = asyncio.Semaphore(max_concurrent)
-    print(f"  [{label}] modelo={model_id} | {len(conversations)} conversas | lote={batch_size} | conc={max_concurrent}")
+    tqdm.write(f"  [{label}] modelo={model_id} | {len(conversations)} conversas | lote={batch_size} | conc={max_concurrent}")
     return await _run_batched(
         client, model_id, sem, conversations,
         lambda msgs: msgs,
